@@ -17,5 +17,4 @@ Suggests:
     rmarkdown,
 URL: https://github.com/raikens1/ScienceTablePlots
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.0.0
-  
+RoxygenNote: 7.2.1
