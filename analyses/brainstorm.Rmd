@@ -1,0 +1,210 @@
+---
+title: "Science Table Plots Brainstorm"
+author: "Rocky Aikens"
+date: '2022-09-08'
+output: 
+  pdf_document:
+    number_sections: true
+bibliography: citations.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE,
+	fig.height=4, fig.width=4
+)
+library(tidyverse)
+library(ggpubr)
+library(ScienceTablePlots)
+theme_set(theme_classic())
+
+n <- 100
+set.seed(123)
+```
+
+# The Science Table Plot
+
+Many a graduate-level course on causal inference begins with a discussion of the *Science Table*: the complete set of potential outcomes for all individuals in a sample @rubin.  The science table -- and the potential outcomes within it -- become the teaching foundation for a variety of causal inference approaches. Herein, I propose a new teaching visualization, *the science table plot*, which depict individuals according to tehri treated and untreated potential outcomes. While in practice the science table plot, like the science table itself, is fundamentally unobservable, in the classroom the science table plot is a handy companion to the science table, underscoring and clarifying foundational causal inference concepts.
+
+```{r schematic, fig.height=3.5, fig.width=3.5, fig.cap = "Science table plots. When a subject is graphically plotted according to their potential outcomes, the vertical distance to the diagonal represents their individual treatment effect, and different plot regions correspond to a positive, negative, or neutral response to treatment"}
+toy_data <- data.frame(y0 = c(1, 4), y1 = c(3, 2),
+                       barcolor = c("green", "red"), label = c("i", "j"))
+
+b <- seq(0, 2*pi, by=0.001)
+circ <- data.frame(y0=2.5*cos(b) + 2.5,
+                   y1=2.5*sin(b) + 2.5)
+circ_pos <- circ %>%
+  filter(y1>y0) %>%
+  mutate(circcolor = "green")
+circ_neg <- circ %>%
+  filter(y0>y1) %>%
+  mutate(circcolor = "red")
+
+
+schematic <- ggplot(toy_data, aes(x = y0, y = y1)) + 
+  geom_polygon(dat = circ_pos, alpha = 0.1, fill = "#57C4AD") +
+  geom_polygon(dat = circ_neg, alpha = 0.1, fill = "#DB4325") +
+  geom_point() +
+  geom_text(aes(label = label), nudge_x = 0.1) +
+  geom_linerange(aes(ymin = y0, ymax = y1, color = barcolor))+
+  scale_color_manual(values = c("#006164", "#DB4325")) +
+  geom_segment(x = 0, y = 0, xend = 2, yend = 2) +
+  geom_segment(x = 3, y = 3, xend = 5, yend = 5) +
+  xlim(c(0, 5)) + ylim(c(0, 5)) +
+  theme(axis.ticks = element_blank(), axis.text = element_blank(), legend.position = "none") +
+  ylab("Y(1)") +
+  xlab("Y(0)") +
+  annotate("text", x = 2, y = 4, label = "Positive Effect", size= 5, color = "#006164") +
+  annotate("text", x = 3, y = 1, label = "Negative Effect", size= 5, color = "#DB4325") +
+  annotate("text", x = 2.5, y = 2.5, label = "No Effect", size= 5, angle = 45) +
+  annotate("text", x = 0.8, y = 2, label = expression(tau[i]), size= 6, parse = TRUE) +
+  annotate("text", x = 3.8, y = 3, label = expression(tau[j]), size= 6, parse = TRUE) +
+  coord_fixed()
+
+schematic
+```
+
+In a science table plot, individuals are depicted according to their treatment and control potential outcomes. In this setting, a subject's individual treatment effect is graphically represented as their vertical distance to the diagonal line representing $Y(0) = Y(1)$ (Figure 1A), and different areas of the plot represent positive, negative, or neutral responses to treatment.  Average treatment effect, then is the average distance of all points to the diagonal. Other estimands which focus on just a subset of the sample, such as the average treatment effect among the treated, are simply the average distance to the diagonal for all points in the subsample.
+
+The next plot visualizes two commonly assumed scenarios for treatment response: a relatively homogenous additive treatment effect, and a relatively homogenous negative one.
+
+```{r fig.height=3, fig.width=6, fig.cap="Panels (A) and (B) depict a relatively homogenous positive or negative additive treatment effect, respectively."}
+pos_effect <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0  +  1.25 + rnorm(n = n, sd = 0.1))
+neg_effect <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0  -  1.25 + rnorm(n = n, sd = 0.1))
+
+neyman_null <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n = n, sd = 0.25))
+
+fisher_null <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0)
+
+pos <- st_plot(pos_effect, title = "Positive effect", size = 1)
+neg <- st_plot(neg_effect, title = "Negative effect", size = 1)
+neyman <- st_plot(neyman_null, title = "Neyman's null", size = 1)
+fisher <- st_plot(fisher_null, title = "Fisher's sharp null", size = 1)
+
+ggarrange(pos, neg)
+```
+
+
+# The null hypotheses
+
+Science Table plots offer an interesting visualization of the two major "null" hypotheses of causal inference.  Figure 1C illustrates Neyman's null hypothesis: the average treatment effect is zero, but individual treatment effects may still vary.  This is in stark contrast to Fisher's sharp null (Figure 1D), in treated and control potential outcomes are identical for all individuals in the study.  This juxtaposition in particular may be an intuitive illustration in educational settings.
+
+```{r fig.height=3, fig.width=6, fig.cap="In Neyman's null hypothesis, treatment effect is zero on averge, but there may still be some heterogeneity in individual responses (C). Fisher's sharp null (D) supposes that all individual level treatment effects are zero: graphically, this means all individual points on a science table plot lie on the diagonal."}
+ggarrange(neyman, fisher)
+```
+# The fundamental problem of causal inference
+
+The fundamental problem of causal inference of course is that we can't observe both potential outcomes at the same time.  On a science table plot, this means that either we observe a subject's vertical position (treated outcome) or their horizontal position.  We might imagine that each point, then, becomes a line.
+
+If treatment were entirely independent of the potential outcomes (as in a randomized trial), we could get a good approximation of the average treatment effect by calculating the average observed outcomes among the treated and control groups.  Here, we see a Science Table plot for a sample where Fisher's null is true: all points lie on the diagonal because each unit's treated and untreated potenital outcome are identical. This plot depicts an random 1:1 allocation scheme sorting units so that either their treated (horizontal line) or untreated (vertical line) outcomes are observed, as in a randomized trial.  For each treated unit, only the treated outcome is observed, so rather than knowing the precise coordinates of their potential outcomes, we know only their horizontal position; they could be anywhere along the horizontal line defined by their treated potential outcome (and likewise, for controls).  A standard difference-in-means approach takes the average observed treated outcome (horizontal black line) and subtracts the average observed untreated outcome.  Visually, the distance from the intersection of the black lines to the diagonal represents the difference in means estimator.  Any deviation of the estimator from the true mean in this case reflects random variation resulting from the specific estimator, but not any bias due to non-random assignment.
+
+```{r fig.height=4, fig.width=4.5}
+n <- 50
+null <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0)
+
+rct_null <- null%>%
+  mutate(t = sample(c(rep(FALSE,n/2), rep(TRUE,n/2))))
+
+fpci_plot(rct_null, size = 2)
+```
+
+In an observational study, things are not so simple. Here, we see that the same underlying science table (with the Fisher's exact null true), could produce either a positive or a negative result depending on who is allocated to treatment and who is not.  This is selection bias.
+
+```{r fig.height=4, fig.width=7}
+null_biased_up <- null %>%
+  mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp(-2*y0 + 5.5)))))
+
+null_biased_down <- null %>%
+  mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp(2*y0 - 5)))))
+
+mean(null_biased_up$t)
+
+null_up <- fpci_plot(null_biased_up, size = 2)
+
+mean(null_biased_down$t)
+
+null_down <- fpci_plot(null_biased_down, size = 2)
+
+ggarrange(null_up, null_down, labels = "AUTO", common.legend = TRUE, legend = "bottom")
+```
+
+## Targeted selection
+
+One scenario of particular concern in economics is the possibility of *targeted selection* the probability that an individual is in the treated group depends on their underlying treatment effect.  The setting below is another null Science Table (this time a Neyman's null), in which there is a large heterogeneity in treatment effect and strong targeted selection.  Individuals with more positive responses to treatment (above the diagonal) are more likely to select into the treated group.  This can also cause bias, even if the treated and untreated units have the same untreated potential outcomes on average (as is the case here).
+
+```{r}
+n <- 50
+
+targeted_selection <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n, sd = 1.5)) %>%
+  mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp(3*(-(y1 - y0)))))))
+
+targeted_selection %>%
+  group_by(t) %>%
+  summarize_all(mean)
+
+fpci_plot(targeted_selection)
+```
+
+
+
+# Superpopulation theory
+
+In randomization inference, the sample is all there is.  The sample average treatment effect is the average distance of all points to the diagonal.  In superpopulation theory, the sample is itself made up of realizations from a probability distribution which determines the potential outcomes. If we imagined we could plot the density of the probability distribution over Y(0) and Y(1), the average treatment effect would be (maybe?) the distance from the mean of this distribution to the diagonal. The sample is merely a window into the true distribution of interest.
+
+
+# Treatment effect heterogeneity
+
+```{r fig.height=4, fig.width = 8, fig.cap="Science table plots depicting a variety of treatment response scenarios"}
+set.seed(123)
+n <- 200
+
+mult_effect <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0*2 + rnorm(n = n, sd = 0.1))
+
+sweet_spot <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = ifelse(y0 > 2 & y0 < 3, y0 + 1.25, y0) + rnorm(n, sd = 0.1))
+
+healthy_benefit <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = exp(0.5*y0)-0.75 + rnorm(n = n, sd = 0.1))
+
+sicker_benefit <- data.frame(y0 = seq(0, 5, length.out = 200)) %>%
+  mutate(y1 = y0 + 2/(y0 + 1) - 0.4 + rnorm(n = n, sd = 0.1))
+
+# I think something might be wrong here.
+tobit_effect <- data.frame(y1 = rnorm(n = n, 2.5)) %>%
+  rowwise() %>%
+  mutate(y0 = max(y1 - 1 + rnorm(n = n, sd = 0.1), 1)) 
+
+few_large_responses <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n, sd = 0.1)) %>%
+  mutate(y1 = ifelse(rbinom(n, 1, 0.09), y1 + 1.5, y1))
+
+high_variance <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n, sd = 1))
+
+variable_variance <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n, sd = y0^2/20))
+
+ggarrange(st_plot(mult_effect, title = "Multiplicative effect"),
+          st_plot(healthy_benefit, title = "\"Healthy\" benefit"),
+          st_plot(sicker_benefit, title = "\"Sicker\" benefit"),
+          st_plot(sweet_spot, title = "\"Sweet Spot\""),
+          st_plot(tobit_effect, title = "Tobit effects"),
+          st_plot(few_large_responses, title = "Rare strong responses"),
+          st_plot(high_variance, title = "High variation"),
+          st_plot(variable_variance, title = "Variation depends on Y(0)"),
+          ncol = 4, nrow = 2, labels = "AUTO")
+```
+
+A science table plot can illustrate a variety of hypothetical models for treatment response, graphically depicting different forms of treatment effect heterogeneity.  A few examples are shown in Figure 2.  Multiplicative effects (Figure 2A) and tobit effects (Figure 2E) are two other treatment effect models occaisionally discussed in the literature.  Many discussions of treatment effect heterogeneity center on the hypothesis that treatment response correllates in some way with the control potential outcome, $Y(0)$: Perhaps "healthy" individuals with higher $Y(0)$ have a greater treatment response (Figure 2B), or perhaps "sicker" individuals with lower $Y(0)$ stand to gain more from treatment (Figure 2C).  In other scenarios, one might suggest that there is a "sweet spot" for treatment, perhaps representing individuals who have intermediate potential outcomes (Figure 2D). 
+
+Figure 2F-H suggest other scenarios which may be more subtle and difficult to identify using common statistical approaches.  Figure 2F depicts a scenario in which many individuals do not substantially benefit from treatment, but there are occaisional large responses to treatment.  This possibility is discussed further by Rosenbaum [cite DoOS] in his consideration of the National Supported Work Experiment, the subject of Lalonde's 1986 study [cite lalonde]. Figure 2G suggests a different possible pattern for heterogeneity. Treatment response is highly heterogeneous, but not in a way that is associated with $Y(0)$. While treatment effect is zero on average, many people stand to benefit from treatment, and many people may respond quite badly. It's possible that this heterogeneity can be explained in part by some measurable covariate independent of $Y(0)$. If so, it may be possible to identify subjects who stand to benefit from treatment and those who will not. Otherwise, treatment response may be highly unpredictable, posing a difficult problem for implementation.  Figure 2H considers a final possibility.  In this scenario, the average treatment effect is zero at all levels of $Y(0)$, but treatment response heterogeniety itself is correlated with the control potential outcomes.  Individuals with some $Y(0)$ have a very uniform response to treatment, while individuals with other levels of $Y(0)$ have highly variable responses.  These examples suggest some ways that treatment effect heterogeneity may take unexpected forms which may be difficult to identify.
