@@ -89,10 +89,10 @@ ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
           common.legend = TRUE, legend = "bottom")
 ```
 ```{r}
-pdf("figures/SATT_SATE.pdf",  width=3.5, height=3.5)
-ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
+ggsave("figures/SATT_SATE.pdf",
+       ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
           st_plot_treated(toy_ts, size = 2, segments = "all"),
-          common.legend = TRUE, legend = "bottom")
-dev.off()
+          common.legend = TRUE, legend = "bottom"),
+       width=7, height=4)
 ```
 

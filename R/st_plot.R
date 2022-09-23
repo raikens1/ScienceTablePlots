@@ -72,7 +72,7 @@ st_plot_treated <- function(data, color = T, title = "", size = 0.8, segments = 
   }
 
   plt <- ggplot(data, aes(x = y0, y = y1, color = color)) +
-    geom_segment(data = seg_data, aes(x = y0, y = y1, xend = y0, yend = y0), size = 1, alpha = 0.5) +
+    geom_segment(data = seg_data, aes(x = y0, y = y1, xend = y0, yend = y0), size = 0.5, alpha = 0.5) +
     geom_point(aes(alpha = t), size = size, color = "black") +
     scale_color_manual(values = c("#DB4325", "#006164"), guide = "none") +
     geom_abline(slope = 1, intercept = 0, size = 1) +
