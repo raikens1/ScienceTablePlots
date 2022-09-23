@@ -66,6 +66,11 @@ schematic <- ggplot(toy_data, aes(x = y0, y = y1)) +
 
 schematic
 ```
+```{r}
+pdf("figures/ST_plot_schematic.pdf",  width=3.5, height=3.5)
+schematic
+dev.off()
+```
 
 In a science table plot, individuals are depicted according to their treatment and control potential outcomes. In this setting, a subject's individual treatment effect is graphically represented as their vertical distance to the diagonal line representing $Y(0) = Y(1)$ (Figure 1A), and different areas of the plot represent positive, negative, or neutral responses to treatment.  Average treatment effect, then is the average distance of all points to the diagonal. Other estimands which focus on just a subset of the sample, such as the average treatment effect among the treated, are simply the average distance to the diagonal for all points in the subsample.
 
@@ -99,12 +104,27 @@ Science Table plots offer an interesting visualization of the two major "null" h
 ```{r fig.height=3, fig.width=6, fig.cap="In Neyman's null hypothesis, treatment effect is zero on averge, but there may still be some heterogeneity in individual responses (C). Fisher's sharp null (D) supposes that all individual level treatment effects are zero: graphically, this means all individual points on a science table plot lie on the diagonal."}
 ggarrange(neyman, fisher)
 ```
+
+# Understanding Estimands
+
+```{r}
+n <- 200
+
+healthy_benefit <- data.frame(y0 = rnorm(n = n, mean = 3, sd = 0.75)) %>%
+  mutate(y1 = y0*2 -3 + rnorm(n = n, sd = 0.1)) %>%
+  mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp(3*(-(y1 - y0)))))))
+
+st_plot_treated(healthy_benefit, size = 2)
+```
+
+
+
 # The fundamental problem of causal inference
 
 The fundamental problem of causal inference of course is that we can't observe both potential outcomes at the same time.  On a science table plot, this means that either we observe a subject's vertical position (treated outcome) or their horizontal position.  We might imagine that each point, then, becomes a line.
 
 If treatment were entirely independent of the potential outcomes (as in a randomized trial), we could get a good approximation of the average treatment effect by calculating the average observed outcomes among the treated and control groups.  Here, we see a Science Table plot for a sample where Fisher's null is true: all points lie on the diagonal because each unit's treated and untreated potenital outcome are identical. This plot depicts an random 1:1 allocation scheme sorting units so that either their treated (horizontal line) or untreated (vertical line) outcomes are observed, as in a randomized trial.  For each treated unit, only the treated outcome is observed, so rather than knowing the precise coordinates of their potential outcomes, we know only their horizontal position; they could be anywhere along the horizontal line defined by their treated potential outcome (and likewise, for controls).  A standard difference-in-means approach takes the average observed treated outcome (horizontal black line) and subtracts the average observed untreated outcome.  Visually, the distance from the intersection of the black lines to the diagonal represents the difference in means estimator.  Any deviation of the estimator from the true mean in this case reflects random variation resulting from the specific estimator, but not any bias due to non-random assignment.
-
+  
 ```{r fig.height=4, fig.width=4.5}
 n <- 50
 null <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
@@ -134,13 +154,16 @@ mean(null_biased_down$t)
 null_down <- fpci_plot(null_biased_down, size = 2)
 
 ggarrange(null_up, null_down, labels = "AUTO", common.legend = TRUE, legend = "bottom")
+
+# Maybe it's more compelling to figure out how to do this in reverse
+# i.e. show two FCPI plots which are identical, but the ST plot behind them is null or non-null.  This shows how without knowing about randomization, you never really can tell.
 ```
 
 ## Targeted selection
 
-One scenario of particular concern in economics is the possibility of *targeted selection* the probability that an individual is in the treated group depends on their underlying treatment effect.  The setting below is another null Science Table (this time a Neyman's null), in which there is a large heterogeneity in treatment effect and strong targeted selection.  Individuals with more positive responses to treatment (above the diagonal) are more likely to select into the treated group.  This can also cause bias, even if the treated and untreated units have the same untreated potential outcomes on average (as is the case here).
+One scenario of particular concern in economics is the possibility of *targeted selection* the probability that an individual is in the treated group depends on their underlying treatment effect.  The setting below is another null Science Table (this time a Neyman's null), in which there is a large heterogeneity in treatment effect and strong targeted selection.  Individuals with more positive responses to treatment (above the diagonal) are more likely to select into the treated group.  This can also cause bias, even if the treated and untreated units have the same untreated potential outcomes on average (as is the case here... I think).
 
-```{r}
+```{r  fig.height=4, fig.width=4.5}
 n <- 50
 
 targeted_selection <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
@@ -151,7 +174,7 @@ targeted_selection %>%
   group_by(t) %>%
   summarize_all(mean)
 
-fpci_plot(targeted_selection)
+fpci_plot(targeted_selection, size = 2)
 ```
 
 
@@ -160,6 +183,17 @@ fpci_plot(targeted_selection)
 
 In randomization inference, the sample is all there is.  The sample average treatment effect is the average distance of all points to the diagonal.  In superpopulation theory, the sample is itself made up of realizations from a probability distribution which determines the potential outcomes. If we imagined we could plot the density of the probability distribution over Y(0) and Y(1), the average treatment effect would be (maybe?) the distance from the mean of this distribution to the diagonal. The sample is merely a window into the true distribution of interest.
 
+
+```{r}
+sample_df <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0  +  1.25 + rnorm(n = n, sd = 0.3))
+
+superpop_df <- data.frame(y0 = rnorm(n = 10000, 2.5)) %>%
+  mutate(y1 = y0  +  1.25 + rnorm(n = 10000, sd = 0.3))
+
+superpop_plot(sample_df, superpop_df, size = 2)
+```
+Well that was less interesting than I had hoped, really.
 
 # Treatment effect heterogeneity
 
@@ -171,13 +205,19 @@ mult_effect <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
   mutate(y1 = y0*2 + rnorm(n = n, sd = 0.1))
 
 sweet_spot <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
-  mutate(y1 = ifelse(y0 > 2 & y0 < 3, y0 + 1.25, y0) + rnorm(n, sd = 0.1))
+  mutate(y1 = ifelse(y0 > 2 & y0 < 3, y0 + 1.25 + rnorm(n, sd = 0.1), y0) + rnorm(n, sd = 0.1))
 
-healthy_benefit <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
-  mutate(y1 = exp(0.5*y0)-0.75 + rnorm(n = n, sd = 0.1))
+healthy_benefit <- data.frame(y0 = rnorm(n = n, mean = 3, sd = 0.75)) %>%
+  mutate(y1 = y0*2 -3 + rnorm(n = n, sd = 0.1))
 
-sicker_benefit <- data.frame(y0 = seq(0, 5, length.out = 200)) %>%
-  mutate(y1 = y0 + 2/(y0 + 1) - 0.4 + rnorm(n = n, sd = 0.1))
+#healthy_benefit <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+#  mutate(y1 = exp(0.5*y0)-0.75 + rnorm(n = n, sd = 0.1))
+
+#sicker_benefit <- data.frame(y0 = seq(0, 5, length.out = 200)) %>%
+#  mutate(y1 = y0 + 2/(y0 + 1) - 0.4 + rnorm(n = n, sd = 0.1))
+
+sicker_benefit <- data.frame(y0 = rnorm(n = n, mean = 3)) %>%
+  mutate(y1 = y0*.2 + 2.5 + rnorm(n = n, sd = 0.1))
 
 # I think something might be wrong here.
 tobit_effect <- data.frame(y1 = rnorm(n = n, 2.5)) %>%

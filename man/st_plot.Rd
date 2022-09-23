@@ -4,7 +4,7 @@
 \alias{st_plot}
 \title{Make Science Table Plot}
 \usage{
-st_plot(data, color = TRUE, title = "")
+st_plot(data, color = TRUE, title = "", size = 0.8)
 }
 \arguments{
 \item{data}{input data with y1 and y0 shown}
@@ -12,6 +12,8 @@ st_plot(data, color = TRUE, title = "")
 \item{color}{color dots based on treatment effect (positive, negative, zero)}
 
 \item{title}{plot title}
+
+\item{size}{dot size for geom_point}
 }
 \value{
 ggplot object
