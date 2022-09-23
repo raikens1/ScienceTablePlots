@@ -1,0 +1,98 @@
+---
+title: "Main Figures"
+author: "Rocky Aikens"
+date: '2022-09-23'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE,
+	fig.height=4, fig.width=4
+)
+library(tidyverse)
+library(ggpubr)
+library(ScienceTablePlots)
+theme_set(theme_classic())
+
+n <- 100
+set.seed(123)
+```
+
+# The Science Table Plot
+
+Many a graduate-level course on causal inference begins with a discussion of the *Science Table*: the complete set of potential outcomes for all individuals in a sample @rubin.  The science table -- and the potential outcomes within it -- become the teaching foundation for a variety of causal inference approaches. Herein, I propose a new teaching visualization, *the science table plot*, which depict individuals according to tehri treated and untreated potential outcomes. While in practice the science table plot, like the science table itself, is fundamentally unobservable, in the classroom the science table plot is a handy companion to the science table, underscoring and clarifying foundational causal inference concepts.
+
+```{r schematic, fig.height=3.5, fig.width=3.5, fig.cap = "Science table plots. When a subject is graphically plotted according to their potential outcomes, the vertical distance to the diagonal represents their individual treatment effect, and different plot regions correspond to a positive, negative, or neutral response to treatment"}
+toy_data <- data.frame(y0 = c(1, 4), y1 = c(3, 2),
+                       barcolor = c("green", "red"), label = c("i", "j"))
+
+b <- seq(0, 2*pi, by=0.001)
+circ <- data.frame(y0=2.5*cos(b) + 2.5,
+                   y1=2.5*sin(b) + 2.5)
+circ_pos <- circ %>%
+  filter(y1>y0) %>%
+  mutate(circcolor = "green")
+circ_neg <- circ %>%
+  filter(y0>y1) %>%
+  mutate(circcolor = "red")
+
+
+schematic <- ggplot(toy_data, aes(x = y0, y = y1)) + 
+  geom_polygon(dat = circ_pos, alpha = 0.1, fill = "#57C4AD") +
+  geom_polygon(dat = circ_neg, alpha = 0.1, fill = "#DB4325") +
+  geom_text(aes(label = label), nudge_x = 0.1) +
+  geom_linerange(aes(ymin = y0, ymax = y1, color = barcolor), size = 1, alpha = 0.5)+
+  scale_color_manual(values = c("#006164", "#DB4325")) +
+  geom_segment(x = 0, y = 0, xend = 2, yend = 2, size = 1, alpha = 0.5) +
+  geom_segment(x = 3, y = 3, xend = 5, yend = 5, size = 1, alpha = 0.5) +
+  geom_point() +
+  xlim(c(0, 5)) + ylim(c(0, 5)) +
+  theme(axis.ticks = element_blank(), axis.text = element_blank(), legend.position = "none") +
+  ylab("Y(1)") +
+  xlab("Y(0)") +
+  annotate("text", x = 2, y = 4, label = "Positive Effect", size= 5, color = "#006164") +
+  annotate("text", x = 3, y = 1, label = "Negative Effect", size= 5, color = "#DB4325") +
+  annotate("text", x = 2.5, y = 2.5, label = "No Effect", size= 5, angle = 45) +
+  annotate("text", x = 0.8, y = 2, label = expression(tau[i]), size= 6, parse = TRUE) +
+  annotate("text", x = 3.8, y = 3, label = expression(tau[j]), size= 6, parse = TRUE) +
+  coord_fixed()
+
+schematic
+```
+
+
+```{r}
+pdf("figures/ST_plot_schematic.pdf",  width=3.5, height=3.5)
+schematic
+dev.off()
+```
+
+# Average Treamtent Effects
+
+When we talk about average treatment effects, it's important to clarify: Average among what group?
+
+```{r fig.height=4, fig.width=6}
+# let's try a toy data set with targeted selection
+set.seed(16)
+n <- 25
+
+toy_ts <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n = n, sd = 1)) %>%
+  mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp((-2*(y1 - y0)))))))
+
+ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
+          st_plot_treated(toy_ts, size = 2, segments = "all"),
+          common.legend = TRUE, legend = "bottom")
+```
+```{r}
+pdf("figures/SATT_SATE.pdf",  width=3.5, height=3.5)
+ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
+          st_plot_treated(toy_ts, size = 2, segments = "all"),
+          common.legend = TRUE, legend = "bottom")
+dev.off()
+```
+

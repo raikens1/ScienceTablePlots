@@ -16,13 +16,12 @@
 #' st_plot(pos_effect, title = "Positive effect")
 st_plot <- function(data, color = TRUE, title = "", size = 0.8) {
   if (color == TRUE){
-    data <- mutate(data, color = y1 > y0)
-    data <- rbind(data, c(NA, NA, FALSE))
+    data <- mutate(data, color = y1 > y0)%>%
+      add_row(y1 = NA, y0 = NA, color = FALSE)
     pbase <- ggplot(data, aes(x = y0, y = y1, color = color))
   } else{
     pbase <- ggplot(data, aes(x = y0, y = y1))
   }
-
   plt <- pbase +
     geom_point(alpha = 0.7, size = size) +
     scale_color_manual(values = c("#DB4325", "#006164")) +
@@ -52,6 +51,7 @@ st_plot <- function(data, color = TRUE, title = "", size = 0.8) {
 #' Produces a science table plot from input data
 #'
 #' @inheritParams st_plot
+#' @param segments draw line segments to the diagonal for "treated" or "all"
 #'
 #' @return ggplot object
 #' @export
@@ -60,21 +60,26 @@ st_plot <- function(data, color = TRUE, title = "", size = 0.8) {
 #' pos_effect <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
 #'     mutate(y1 = y0  +  1.25 + rnorm(n = n, sd = 0.1))
 #' st_plot(pos_effect, title = "Positive effect")
-st_plot_treated <- function(data, color = TRUE, title = "", size = 0.8) {
-  if (color == TRUE){
-    data <- mutate(data, color = y1 > y0)
-    data <- rbind(data, c(NA, NA, FALSE))
-    pbase <- ggplot(data, aes(x = y0, y = y1, color = color))
-  } else{
-    pbase <- ggplot(data, aes(x = y0, y = y1))
+st_plot_treated <- function(data, color = T, title = "", size = 0.8, segments = "treated") {
+  data <- mutate(data, color = y1 > y0) %>%
+    add_row(y1 = NA, y0 = NA, color = FALSE)
+
+  if(segments == "treated"){
+    seg_data <- data %>% filter(t == TRUE) %>%
+      add_row(y1 = NA, y0 = NA, color = FALSE)
+  } else {
+    seg_data <- data
   }
 
-  plt <- pbase +
-    geom_point(aes(alpha = t), size = size) +
-    scale_color_manual(values = c("#DB4325", "#006164")) +
-    geom_abline(slope = 1, intercept = 0) +
+  plt <- ggplot(data, aes(x = y0, y = y1, color = color)) +
+    geom_segment(data = seg_data, aes(x = y0, y = y1, xend = y0, yend = y0), size = 1, alpha = 0.5) +
+    geom_point(aes(alpha = t), size = size, color = "black") +
+    scale_color_manual(values = c("#DB4325", "#006164"), guide = "none") +
+    geom_abline(slope = 1, intercept = 0, size = 1) +
+    scale_alpha_manual(values = c(0.3, 1), labels = c("Untreated", "Treated"),
+                       name = "", na.translate = F) +
     xlim(c(0, 5)) + ylim(c(0, 5)) +
-    theme(axis.ticks = element_blank(), axis.text = element_blank(), legend.position = "none") +
+    theme(axis.ticks = element_blank(), axis.text = element_blank()) +
     ylab("Y(1)") +
     xlab("Y(0)") +
     coord_fixed()
