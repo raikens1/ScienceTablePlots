@@ -45,7 +45,7 @@ schematic <- ggplot(toy_data, aes(x = y0, y = y1)) +
   geom_polygon(dat = circ_pos, alpha = 0.1, fill = "#57C4AD") +
   geom_polygon(dat = circ_neg, alpha = 0.1, fill = "#DB4325") +
   geom_text(aes(label = label), nudge_x = 0.1) +
-  geom_linerange(aes(ymin = y0, ymax = y1, color = barcolor), size = 1, alpha = 0.5)+
+  geom_linerange(aes(ymin = y0, ymax = y1, color = barcolor), size = 0.5, alpha = 0.5)+
   scale_color_manual(values = c("#006164", "#DB4325")) +
   geom_segment(x = 0, y = 0, xend = 2, yend = 2, size = 1, alpha = 0.5) +
   geom_segment(x = 3, y = 3, xend = 5, yend = 5, size = 1, alpha = 0.5) +
@@ -75,7 +75,7 @@ dev.off()
 
 When we talk about average treatment effects, it's important to clarify: Average among what group?
 
-```{r fig.height=4, fig.width=6}
+```{r fig.height=3.5, fig.width=6}
 # let's try a toy data set with targeted selection
 set.seed(16)
 n <- 25
@@ -84,15 +84,37 @@ toy_ts <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
   mutate(y1 = y0 + rnorm(n = n, sd = 1)) %>%
   mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp((-2*(y1 - y0)))))))
 
-ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
-          st_plot_treated(toy_ts, size = 2, segments = "all"),
-          common.legend = TRUE, legend = "bottom")
+ggarrange(st_plot_treated(toy_ts, size = 1.5, segments = "all"),
+          st_plot_treated(toy_ts, size = 1.5, segments = "treated"),
+          common.legend = TRUE, legend = "bottom", labels = "AUTO")
 ```
 ```{r}
 ggsave("figures/SATT_SATE.pdf",
-       ggarrange(st_plot_treated(toy_ts, size = 2, segments = "treated"),
-          st_plot_treated(toy_ts, size = 2, segments = "all"),
-          common.legend = TRUE, legend = "bottom"),
-       width=7, height=4)
+       ggarrange(st_plot_treated(toy_ts, size = 1.5, segments = "all"),
+          st_plot_treated(toy_ts, size = 1.5, segments = "treated"),
+          common.legend = TRUE, legend = "bottom", labels = "AUTO"),
+       width=6, height=3.5)
 ```
+
+SATT and SATE are properties of the sample.  When we talk about these estimands, the potential outcomes of the subjects in the sample are all we care about, and the uncertainty in our estimates of sample treatment effects comes from the fact that we cannot observe both potential outcomes in the sample.  This is sometimes called the "randomization inference" framework.
+
+Another approach begins with a setting that more closely resembles the set-ups from an undergraduate statistics course.  Suppose outcomes and treatments are sampled from some probability distribution ($Y_i(0), Y_i(1), T \sim \Omega$). Now, instead of being the full scope of our interest, the sample is merely a window into the probability distribution $\Omega$.  We might write the effect estimates we care about in terms of expected values over $\Omega$:
+
+$$\tau^{ATE} = E_{\Omega}[Y(1) - Y(0)], \tau^{ATT} = E_{\Omega}[Y(1)-Y(0) | T = 1]$$
+This is called the "superpopulation" framework. That is, ATE and ATT are properties of the superpopulation from which the sample was drawn.  If you could draw two different samples from the same underlying distribution $\Omega$, the SATE for those two samples will almost certainly differ, whereas the ATE will stay the same\footnote{Sometimes, the ATT and ATE are described as "population" estimands and written PATT and PATE.  I'm avoiding that notation here to avoid confusion with the generalizability literature. Often, the supposed superpopulation may not be equivalent to an actual population that exists in practice.}. 
+
+```{r}
+n <- 10000
+superpop_df <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
+  mutate(y1 = y0 + rnorm(n = n, sd = 1)) %>%
+  mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp((-2*(y1 - y0)))))))
+
+superpop_plot(toy_ts, superpop_df, size = 2)
+```
+
+
+Different researchers will favor one framework over the other for a variety of reasons, but students should expect to run into them both. \footnote{In some settings, it may be difficult to swallow that the observed sample really is all you care about (as in sample estimands).  In some settings, it may be difficult to swallow that the superpopulation from which the sample is assumed to be derived is something you care about either.}
+
+
+
 
