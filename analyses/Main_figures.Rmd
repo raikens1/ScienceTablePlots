@@ -84,14 +84,15 @@ toy_ts <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
   mutate(y1 = y0 + rnorm(n = n, sd = 1)) %>%
   mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp((-2*(y1 - y0)))))))
 
-ggarrange(st_plot_treated(toy_ts, size = 1.5, segments = "all"),
-          st_plot_treated(toy_ts, size = 1.5, segments = "treated"),
+SATE_plot <- st_plot_treated(toy_ts, size = 1.5, segments = "all", title = "  SATE")
+SATT_plot <- st_plot_treated(toy_ts, size = 1.5, segments = "treated", title = "  SATT")
+
+ggarrange(SATE_plot, SATT_plot,
           common.legend = TRUE, legend = "bottom", labels = "AUTO")
 ```
 ```{r}
 ggsave("figures/SATT_SATE.pdf",
-       ggarrange(st_plot_treated(toy_ts, size = 1.5, segments = "all"),
-          st_plot_treated(toy_ts, size = 1.5, segments = "treated"),
+       ggarrange(SATE_plot, SATT_plot,
           common.legend = TRUE, legend = "bottom", labels = "AUTO"),
        width=6, height=3.5)
 ```
@@ -104,12 +105,27 @@ $$\tau^{ATE} = E_{\Omega}[Y(1) - Y(0)], \tau^{ATT} = E_{\Omega}[Y(1)-Y(0) | T = 
 This is called the "superpopulation" framework. That is, ATE and ATT are properties of the superpopulation from which the sample was drawn.  If you could draw two different samples from the same underlying distribution $\Omega$, the SATE for those two samples will almost certainly differ, whereas the ATE will stay the same\footnote{Sometimes, the ATT and ATE are described as "population" estimands and written PATT and PATE.  I'm avoiding that notation here to avoid confusion with the generalizability literature. Often, the supposed superpopulation may not be equivalent to an actual population that exists in practice.}. 
 
 ```{r}
-n <- 10000
+n <- 50000
 superpop_df <- data.frame(y0 = rnorm(n = n, 2.5)) %>%
   mutate(y1 = y0 + rnorm(n = n, sd = 1)) %>%
   mutate(t = as.logical(rbinom(n = n, size = 1, prob = 1 / (1 + exp((-2*(y1 - y0)))))))
 
-superpop_plot(toy_ts, superpop_df, size = 2)
+superpop_df_t_only <- superpop_df %>%
+  filter(t == TRUE)
+
+ATE_plot <- superpop_plot(toy_ts, superpop_df, size = 2, title = "  ATE")
+ATT_plot <- superpop_plot(toy_ts, superpop_df_t_only, size = 2, title = "  ATT")
+```
+
+```{r fig.height=6, fig.width=6}
+ggarrange(SATE_plot, SATT_plot, ATE_plot, ATT_plot, common.legend = T, labels = "AUTO")
+```
+
+
+```{r}
+ggsave("figures/Estimands.pdf",
+       ggarrange(SATE_plot, SATT_plot, ATE_plot, ATT_plot, common.legend = T, labels = "AUTO")
+       width=6, height=6)
 ```
 
 

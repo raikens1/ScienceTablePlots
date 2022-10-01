@@ -39,7 +39,7 @@ st_plot <- function(data, color = TRUE, title = "", size = 0.8) {
 
   # add title if needed
   if(!is.null(title)){
-    plt <- plt + ggtitle(title) + theme(plot.title = element_text(size = 10))
+    plt <- plt + ggtitle(title)
   }
 
   plt
@@ -91,7 +91,7 @@ st_plot_treated <- function(data, color = T, title = "", size = 0.8, segments = 
 
   # add title if needed
   if(!is.null(title)){
-    plt <- plt + ggtitle(title) + theme(plot.title = element_text(size = 10))
+    plt <- plt + ggtitle(title)
   }
 
   plt
@@ -112,11 +112,9 @@ superpop_plot <- function(data, superpop_data, title = "", size = 0.8){
   superpop_data <- mutate(superpop_data, color = y1 > y0) %>%
     add_row(y1 = NA, y0 = NA, color = FALSE)
 
-  plt <- ggplot(data, aes(x = y0, y = y1, color = color, fill = color)) +
+  plt <- ggplot(data, aes(x = y0, y = y1)) +
     geom_point(alpha = 0.8, size = size) +
     stat_density_2d(dat = superpop_data, geom = "polygon", color = NA, aes(alpha = as.factor(..level..)), bins = 4) +
-    scale_color_manual(values = c("#DB4325", "#006164")) +
-    scale_fill_manual(values = c("#DB4325", "#006164")) +
     scale_alpha_manual(values = c(0.1, 0.2, 0.3, 0.4)) +
     geom_abline(slope = 1, intercept = 0) +
     xlim(c(0, 5)) + ylim(c(0, 5)) +
@@ -125,14 +123,9 @@ superpop_plot <- function(data, superpop_data, title = "", size = 0.8){
     xlab("Y(0)") +
     coord_fixed()
 
-  # special case if Fisher's null is true
-  if(all(data$y0 == data$y1, na.rm = TRUE)){
-    plt <- plt + scale_color_manual(values = "bisque4")
-  }
-
   # add title if needed
   if(!is.null(title)){
-    plt <- plt + ggtitle(title) + theme(plot.title = element_text(size = 10))
+    plt <- plt + ggtitle(title)
   }
 
   plt
@@ -191,7 +184,7 @@ fpci_plot <- function(data, color = TRUE, title = "", size = 0.8) {
 
   # add title if needed
   if(!is.null(title)){
-    plt <- plt + ggtitle(title) + theme(plot.title = element_text(size = 10))
+    plt <- plt + ggtitle(title)
   }
 
   plt
